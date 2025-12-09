@@ -1,8 +1,9 @@
-package model
+package main
 
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 // NewMatchingEngine 创建新的交易引擎
@@ -33,11 +34,24 @@ func (me *MatchingEngine) Start() {
 	fmt.Println("Matching engine started")
 }
 
-// Stop 停止交易引擎
+// Stop 优雅停止交易引擎（增加超时保护）
 func (me *MatchingEngine) Stop() {
 	close(me.StopChan)
-	me.Wg.Wait()
-	fmt.Println("Matching engine stopped")
+
+	// 异步等待协程退出，避免阻塞主线程
+	done := make(chan struct{})
+	go func() {
+		me.Wg.Wait()
+		close(done)
+	}()
+
+	// 超时控制：1秒内未退出则提示可能死锁
+	select {
+	case <-done:
+		fmt.Println("Matching engine stopped normally")
+	case <-time.After(1 * time.Second):
+		fmt.Println("Matching engine stopped (timeout: possible deadlock)")
+	}
 }
 
 // orderProcessor 处理订单请求

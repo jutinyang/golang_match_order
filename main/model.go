@@ -1,9 +1,10 @@
-package model
+package main
 
 import (
 	"container/list"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/google/btree"
 )
@@ -86,11 +87,14 @@ type OrderBook struct {
 
 // 交易引擎结构体
 type MatchingEngine struct {
-	OrderBooks map[string]*OrderBook // 交易对到订单簿的映射
-	OrderChan  chan *Order           // 订单请求通道（带缓冲）
-	TradeChan  chan []*Trade         // 成交结果通道
-	WorkerPool *sync.Pool            // 撮合结果处理池
-	Wg         sync.WaitGroup        // 等待所有goroutine结束
-	StopChan   chan struct{}         // 停止信号
-	mutex      sync.RWMutex          // 订单簿全局锁（用于跨价格层级操作）
+	OrderBooks   map[string]*OrderBook // 交易对到订单簿的映射
+	OrderChan    chan *Order           // 订单请求通道（带缓冲）
+	TradeChan    chan []*Trade         // 成交结果通道
+	WorkerPool   *sync.Pool            // 撮合结果处理池
+	Wg           sync.WaitGroup        // 等待所有goroutine结束
+	StopChan     chan struct{}         // 停止信号
+	mutex        sync.RWMutex          // 订单簿全局锁（用于跨价格层级操作）
+	OrderCount   int64                 // 总订单数
+	TradeCount   int64                 // 总成交数
+	MatchLatency time.Duration         // 平均撮合延迟
 }

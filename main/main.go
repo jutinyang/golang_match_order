@@ -1,4 +1,4 @@
-package model
+package main
 
 import (
 	"fmt"
@@ -7,7 +7,11 @@ import (
 	"time"
 )
 
-func TestLimitOrderMatching1(t *testing.T) {
+func main() {
+	TestLimitOrderMatching1()
+}
+
+func TestLimitOrderMatching1() {
 	// 创建交易引擎
 	engine := NewMatchingEngine()
 	engine.Start()

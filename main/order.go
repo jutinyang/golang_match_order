@@ -1,4 +1,4 @@
-package model
+package main
 
 import (
 	"container/list"
@@ -21,27 +21,24 @@ func NewOrderBook(symbol string) *OrderBook {
 	}
 }
 
-// AddOrder 添加订单到订单簿
 func (ob *OrderBook) AddOrder(order *Order) error {
+	// 步骤1：检查订单是否存在（持有订单簿锁）
 	ob.mutex.Lock()
-	defer ob.mutex.Unlock()
-
-	// 检查订单是否已存在
 	if _, exists := ob.OrderMap[order.OrderID]; exists {
-		return fmt.Errorf("order already exists: %s", order.OrderID)
+		ob.mutex.Unlock()
+		return fmt.Errorf("order %s exists", order.OrderID)
 	}
+	ob.mutex.Unlock() // 提前释放锁
 
-	// 确定订单簿（买单/卖单）
+	// 步骤2：获取/创建价格层级（持有订单簿锁）
+	ob.mutex.Lock()
 	tree := ob.Asks
 	if order.Side == SideBuy {
 		tree = ob.Bids
 	}
-
-	// 检查价格层级是否存在
 	priceStr := order.Price.String()
 	level, exists := ob.PriceLevels[priceStr]
 	if !exists {
-		// 创建新价格层级
 		level = &PriceLevel{
 			Price:    order.Price,
 			TotalQty: big.NewFloat(0),
@@ -49,21 +46,21 @@ func (ob *OrderBook) AddOrder(order *Order) error {
 			OrderMap: make(map[string]*list.Element),
 		}
 		ob.PriceLevels[priceStr] = level
-		// 添加到btree
 		tree.ReplaceOrInsert(&PriceLevelItem{Price: order.Price, Level: level})
 	}
+	ob.mutex.Unlock() // 提前释放锁
 
-	// 更新价格层级总数量
+	// 步骤3：添加订单到价格层级（持有价格层级锁）
 	level.mutex.Lock()
 	defer level.mutex.Unlock()
 	level.TotalQty.Add(level.TotalQty, order.Remaining)
-
-	// 添加订单到链表尾部（时间优先）
 	elem := level.Orders.PushBack(order)
 	level.OrderMap[order.OrderID] = elem
 
-	// 添加到全局订单映射
+	// 步骤4：更新全局订单映射（持有订单簿锁）
+	ob.mutex.Lock()
 	ob.OrderMap[order.OrderID] = order
+	ob.mutex.Unlock()
 
 	return nil
 }

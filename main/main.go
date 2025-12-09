@@ -1,6 +1,7 @@
 package main
 
 import (
+	"demo1/model"
 	"fmt"
 	"math/big"
 	"testing"
@@ -13,48 +14,48 @@ func main() {
 
 func TestLimitOrderMatching1() {
 	// 创建交易引擎
-	engine := NewMatchingEngine()
+	engine := model.NewMatchingEngine()
 	engine.Start()
 	defer engine.Stop()
 
 	// 创建买单（限价45000 USDT，数量1 BTC）
-	buyOrder := &Order{
+	buyOrder := &model.Order{
 		OrderID:    "buy-001",
 		UserID:     "user-001",
 		Symbol:     "BTC/USDT",
-		Side:       SideBuy,
+		Side:       model.SideBuy,
 		Price:      big.NewFloat(45000),
 		Quantity:   big.NewFloat(1),
 		Remaining:  big.NewFloat(1),
-		Status:     StatusPending,
+		Status:     model.StatusPending,
 		CreateTime: time.Now().UnixNano(),
 		IsMarket:   false,
 	}
 
 	// 创建卖单（限价44900 USDT，数量0.5 BTC）
-	sellOrder1 := &Order{
+	sellOrder1 := &model.Order{
 		OrderID:    "sell-001",
 		UserID:     "user-002",
 		Symbol:     "BTC/USDT",
-		Side:       SideSell,
+		Side:       model.SideSell,
 		Price:      big.NewFloat(44900),
 		Quantity:   big.NewFloat(0.5),
 		Remaining:  big.NewFloat(0.5),
-		Status:     StatusPending,
+		Status:     model.StatusPending,
 		CreateTime: time.Now().UnixNano(),
 		IsMarket:   false,
 	}
 
 	// 创建卖单（限价45000 USDT，数量0.6 BTC）
-	sellOrder2 := &Order{
+	sellOrder2 := &model.Order{
 		OrderID:    "sell-002",
 		UserID:     "user-003",
 		Symbol:     "BTC/USDT",
-		Side:       SideSell,
+		Side:       model.SideSell,
 		Price:      big.NewFloat(45000),
 		Quantity:   big.NewFloat(0.6),
 		Remaining:  big.NewFloat(0.6),
-		Status:     StatusPending,
+		Status:     model.StatusPending,
 		CreateTime: time.Now().UnixNano(),
 		IsMarket:   false,
 	}
@@ -79,21 +80,21 @@ func TestLimitOrderMatching1() {
 
 func TestMarketOrderMatching2(t *testing.T) {
 	// 创建交易引擎
-	engine := NewMatchingEngine()
+	engine := model.NewMatchingEngine()
 	engine.Start()
 	defer engine.Stop()
 
 	// 创建多个卖单
 	for i := 0; i < 5; i++ {
-		sellOrder := &Order{
+		sellOrder := &model.Order{
 			OrderID:    fmt.Sprintf("sell-%03d", i+1),
 			UserID:     fmt.Sprintf("user-%03d", i+1),
 			Symbol:     "BTC/USDT",
-			Side:       SideSell,
+			Side:       model.SideSell,
 			Price:      big.NewFloat(45000 + float64(i)*100), // 价格从45000到45400
 			Quantity:   big.NewFloat(0.2),
 			Remaining:  big.NewFloat(0.2),
-			Status:     StatusPending,
+			Status:     model.StatusPending,
 			CreateTime: time.Now().UnixNano(),
 			IsMarket:   false,
 		}
@@ -101,15 +102,15 @@ func TestMarketOrderMatching2(t *testing.T) {
 	}
 
 	// 创建市价买单（数量0.8 BTC）
-	marketBuyOrder := &Order{
+	marketBuyOrder := &model.Order{
 		OrderID:    "market-buy-001",
 		UserID:     "user-100",
 		Symbol:     "BTC/USDT",
-		Side:       SideBuy,
+		Side:       model.SideBuy,
 		Price:      big.NewFloat(0), // 市价单价格为0
 		Quantity:   big.NewFloat(0.8),
 		Remaining:  big.NewFloat(0.8),
-		Status:     StatusPending,
+		Status:     model.StatusPending,
 		CreateTime: time.Now().UnixNano(),
 		IsMarket:   true,
 	}

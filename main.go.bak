@@ -1,0 +1,91 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/google/btree"
+)
+
+// Order 订单结构体（实现 btree.Item 接口）
+type Order struct {
+	ID       string  // 订单ID
+	Price    float64 // 订单价格（限价单）
+	Quantity int     // 订单数量
+	Side     string  // 订单方向："buy"（买）/ "sell"（卖）
+}
+
+// Less 实现 btree.Item 接口的 Less 方法，用于 B 树排序
+// 规则：
+// - 卖单簿（Side="sell"）：按价格升序排列（优先匹配最低价卖单）
+// - 买单簿（Side="buy"）：按价格降序排列（优先匹配最高价买单）
+func (o *Order) Less(than btree.Item) bool {
+	other := than.(*Order)
+
+	// 不同方向的订单不直接比较（实际场景中买单簿和卖单簿是分开的 B 树）
+	if o.Side != other.Side {
+		return false
+	}
+
+	switch o.Side {
+	case "sell":
+		// 卖单簿：价格低的排在前面
+		return o.Price < other.Price
+	case "buy":
+		// 买单簿：价格高的排在前面
+		return o.Price > other.Price
+	default:
+		return false
+	}
+}
+
+func main() {
+	// 1. 初始化 B 树（度为 2，即 2-3 树，适合中小规模数据）
+	// 卖单簿：存储所有未成交卖单，按价格升序排列
+	sellBook := btree.New(2)
+
+	// 2. 向卖单簿插入卖单
+	orders := []*Order{
+		{ID: "sell1", Price: 100.5, Quantity: 10, Side: "sell"}, // 价格100.5，数量10
+		{ID: "sell2", Price: 99.8, Quantity: 5, Side: "sell"},   // 价格99.8，数量5（更低，应排前面）
+		{ID: "sell3", Price: 101.2, Quantity: 8, Side: "sell"},  // 价格101.2，数量8（更高，应排后面）
+	}
+
+	for _, order := range orders {
+		sellBook.ReplaceOrInsert(order)
+		fmt.Printf("插入卖单: ID=%s, 价格=%.1f, 数量=%d\n", order.ID, order.Price, order.Quantity)
+	}
+
+	// 3. 遍历卖单簿（验证排序：按价格升序）
+	fmt.Println("\n卖单簿排序结果（按价格升序）：")
+	sellBook.Ascend(func(item btree.Item) bool {
+		order := item.(*Order)
+		fmt.Printf("ID=%s, 价格=%.1f, 数量=%d\n", order.ID, order.Price, order.Quantity)
+		return true // 继续遍历
+	})
+
+	// 4. 模拟买单匹配：查找价格 ≤ 100.0 的卖单（买单愿意以100.0元买入）
+	// 替换原来的AscendLessOrEqual部分
+	fmt.Println("\n匹配价格 ≤ 100.0 的卖单：")
+	targetPrice := 100.0
+	sellBook.Ascend(func(item btree.Item) bool {
+		order := item.(*Order)
+		// 增加价格判断：仅处理价格≤targetPrice的订单
+		if order.Price > targetPrice {
+			return false // 后续订单价格更高，直接终止遍历
+		}
+		fmt.Printf("匹配到卖单: ID=%s, 价格=%.1f, 数量=%d\n", order.ID, order.Price, order.Quantity)
+		return true // 继续匹配下一个
+	})
+
+	// 5. 删除已成交的卖单（模拟卖单完全成交后从订单簿移除）
+	fmt.Println("\n删除卖单 sell2（假设完全成交）：")
+	sellBook.Delete(orders[1]) // orders[1] 是 sell2
+
+	// 6. 再次遍历卖单簿（验证删除结果）
+	fmt.Println("\n删除后的卖单簿：")
+	sellBook.Ascend(func(item btree.Item) bool {
+		order := item.(*Order)
+		fmt.Printf("ID=%s, 价格=%.1f, 数量=%d\n", order.ID, order.Price, order.Quantity)
+		return true
+	})
+}

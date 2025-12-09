@@ -4,12 +4,11 @@ import (
 	"demo1/model"
 	"fmt"
 	"math/big"
-	"testing"
 	"time"
 )
 
 func main() {
-	TestLimitOrderMatching1()
+	TestMarketOrderMatching2()
 }
 
 func TestLimitOrderMatching1() {
@@ -78,7 +77,7 @@ func TestLimitOrderMatching1() {
 	fmt.Println("Sell order 2 remaining:", sellOrder2.Remaining.Text('f', 6))
 }
 
-func TestMarketOrderMatching2(t *testing.T) {
+func TestMarketOrderMatching2() {
 	// 创建交易引擎
 	engine := model.NewMatchingEngine()
 	engine.Start()

@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	TestMarketOrderMatching2()
+	TestLimitOrderMatching1()
 }
 
 func TestLimitOrderMatching1() {

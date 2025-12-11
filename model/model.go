@@ -40,16 +40,17 @@ type Order struct {
 
 // 成交记录结构体
 type Trade struct {
-	TradeID      string     // 唯一成交ID
-	Symbol       string     // 交易对
-	Price        *big.Float // 成交价格
-	Quantity     *big.Float // 成交数量
-	MakerOrderID string     // 挂单者订单ID（被动成交）
-	TakerOrderID string     // 主动成交者订单ID
-	MakerUserID  string     // 挂单者用户ID
-	TakerUserID  string     // 主动成交者用户ID
-	TradeTime    int64      // 成交时间（纳秒级）
-	Fee          *big.Float // 交易手续费（Taker支付）
+	TradeID     string     // 成交唯一ID（全局唯一）
+	Symbol      string     // 交易对（和订单一致）
+	BuyOrderID  string     // 买单ID（固定区分买卖）
+	SellOrderID string     // 卖单ID（固定区分买卖）
+	TradePrice  *big.Float // 成交价格（高精度）
+	TradeQty    *big.Float // 成交数量（matchQty）
+	BuyUserID   string     // 买单用户ID（用于结算）
+	SellUserID  string     // 卖单用户ID（用于结算）
+	OrderSide   string     // 触发成交的订单方向（buy/sell）
+	IsMarket    bool       // 是否包含市价单
+	TradeTime   int64      // 成交时间（纳秒级）
 }
 
 // 价格层级结构体（同一价格的订单集合）

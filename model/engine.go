@@ -93,9 +93,14 @@ func (me *MatchingEngine) tradeProcessor() {
 			// 2. 更新行情数据
 			// 3. 推送WebSocket通知给用户
 			for _, trade := range trades {
+				// 修正字段名：Price→TradePrice、Quantity→TradeQty、MakerUserID→BuyUserID、TakerUserID→SellUserID
 				fmt.Printf("Trade executed: %s, Price: %s, Quantity: %s, Maker: %s, Taker: %s\n",
-					trade.TradeID, trade.Price.Text('f', 2), trade.Quantity.Text('f', 6),
-					trade.MakerUserID, trade.TakerUserID)
+					trade.TradeID,
+					trade.TradePrice.Text('f', 2), // 原Price→TradePrice
+					trade.TradeQty.Text('f', 6),   // 原Quantity→TradeQty
+					trade.BuyUserID,               // 原MakerUserID→BuyUserID
+					trade.SellUserID,              // 原TakerUserID→SellUserID
+				)
 			}
 			// 归还切片到对象池
 			me.WorkerPool.Put(trades[:0])

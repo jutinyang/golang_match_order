@@ -2,6 +2,7 @@ package model
 
 import (
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/google/btree"
@@ -72,6 +73,23 @@ func (ob *OrderBook) traversePriceLevel(
 		restingOrder := orderElem.Value.(*Order)
 		nextElem := orderElem.Next()
 
+		// ========== 新增：声明并赋值buyOrder/sellOrder（解决undefined错误） ==========
+		var (
+			buyOrder  *Order // 存储买单
+			sellOrder *Order // 存储卖单
+		)
+		// 根据订单方向区分买卖单（核心：确保buyOrder是买单，sellOrder是卖单）
+		if newOrder.Side == "buy" && restingOrder.Side == "sell" {
+			buyOrder = newOrder
+			sellOrder = restingOrder
+		} else if newOrder.Side == "sell" && restingOrder.Side == "buy" {
+			buyOrder = restingOrder
+			sellOrder = newOrder
+		} else {
+			// 同一方向订单无法撮合，直接跳过
+			orderElem = nextElem
+			continue
+		}
 		if restingOrder.Status != StatusPending {
 			orderElem = nextElem
 			continue
@@ -85,7 +103,21 @@ func (ob *OrderBook) traversePriceLevel(
 			matchQty.Copy(remaining)
 		}
 
-		trade := &Trade{ /* 成交记录逻辑保持不变 */ }
+		// 生成成交记录（现在buyOrder/sellOrder已定义）
+		trade := &Trade{
+			TradeID:     genTradeID(newOrder),
+			Symbol:      newOrder.Symbol,
+			BuyOrderID:  buyOrder.OrderID,  // 已定义，无undefined错误
+			SellOrderID: sellOrder.OrderID, // 已定义，无undefined错误
+			TradePrice:  new(big.Float).Copy(restingOrder.Price),
+			TradeQty:    new(big.Float).Copy(matchQty),
+			BuyUserID:   buyOrder.UserID,  // 已定义
+			SellUserID:  sellOrder.UserID, // 已定义
+			OrderSide:   newOrder.Side,
+			IsMarket:    newOrder.IsMarket || restingOrder.IsMarket,
+			TradeTime:   time.Now().UnixNano(),
+		}
+
 		*trades = append(*trades, trade)
 
 		// 更新剩余数量和订单状态（逻辑保持不变）
@@ -173,4 +205,19 @@ func calculateFee(quantity, price *big.Float) *big.Float {
 	amount := big.NewFloat(0).Mul(quantity, price)
 	feeRate := big.NewFloat(0.001) // 0.1%
 	return big.NewFloat(0).Mul(amount, feeRate)
+}
+
+// 新增参数newOrder *Order，用于获取订单ID前缀
+func genTradeID(newOrder *Order) string {
+	// 1. 正确转换纳秒时间戳为字符串
+	timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
+	// 2. 取订单ID的前8位（需先判断订单ID长度，避免索引越界）
+	var orderIDPrefix string
+	if len(newOrder.OrderID) >= 8 {
+		orderIDPrefix = newOrder.OrderID[:8]
+	} else {
+		orderIDPrefix = newOrder.OrderID
+	}
+	// 3. 生成TradeID
+	return "trade_" + timestamp + "_" + orderIDPrefix
 }
